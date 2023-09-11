@@ -144,16 +144,14 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        if (!networkManager.IsClient) // If not already a client
+        if (!networkManager.IsClient) 
         {
             networkManager.StartClient();
 
-            // Check connection after a delay
             StartCoroutine(CheckClientConnection());
         }
         else
         {
-            // Moved this logic to DisplayConnectionError()
             DisplayConnectionError();
         }
     }
@@ -171,21 +169,20 @@ public class UIManager : MonoBehaviour
 
     private IEnumerator CheckClientConnection()
     {
-        yield return new WaitForSeconds(2); // Wait for 2 seconds
+        yield return new WaitForSeconds(2);
 
-        if (networkManager.IsConnectedClient) // Check if the client is connected
+        if (networkManager.IsConnectedClient)
         {
             UpdateUIForClientMode();
         }
         else
         {
-            DisplayConnectionError();  // Display the error if the client failed to connect
+            DisplayConnectionError();
         }
     }
 
     private void DisplayConnectionError()
     {
-        // Create and display the error text
         GameObject errorObj = new GameObject("ErrorText");
         errorObj.transform.SetParent(uiCanvas.transform, false);
         TextMeshProUGUI errorText = errorObj.AddComponent<TextMeshProUGUI>();
@@ -198,11 +195,9 @@ public class UIManager : MonoBehaviour
         errorTransform.anchoredPosition = Vector2.zero;
         errorTransform.sizeDelta = new Vector2(400, 30);
 
-        // Make server and host buttons inactive
         serverButton.gameObject.SetActive(false);
         hostButton.gameObject.SetActive(false); 
 
-        // Move the client button to the position of the host button and adjust its state
         clientButton.GetComponent<RectTransform>().anchoredPosition = hostButton.GetComponent<RectTransform>().anchoredPosition;
         clientButton.GetComponentInChildren<TextMeshProUGUI>().text = "Shutdown Client";
         clientButton.onClick.RemoveAllListeners();
@@ -211,32 +206,26 @@ public class UIManager : MonoBehaviour
 
     private void ResetUIAfterShutdown()
     {
-        // Make host and server buttons active again
         hostButton.gameObject.SetActive(true);
         serverButton.gameObject.SetActive(true);
 
-        // Reset client button to its initial state
         clientButton.GetComponentInChildren<TextMeshProUGUI>().text = "Client";
         clientButton.onClick.RemoveAllListeners();
         clientButton.onClick.AddListener(OnClientButtonClicked);
 
-        // Remove error message if present
         GameObject errorObj = GameObject.Find("ErrorText");
         if (errorObj != null) Destroy(errorObj);
     }
 
     private void HandleFailedConnection()
     {
-        // Hide the Server button
         serverButton.gameObject.SetActive(false);
 
-        // Set Client button to its default state
         clientButton.GetComponentInChildren<TextMeshProUGUI>().text = "Client";
         clientButton.onClick.RemoveAllListeners();
         clientButton.onClick.AddListener(OnClientButtonClicked);
-        clientButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(-Screen.width / 2 + 100, Screen.height / 2 - 55); // Reset the position
+        clientButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(-Screen.width / 2 + 100, Screen.height / 2 - 55);
 
-        // Destroy the error message
         GameObject errorObj = GameObject.Find("ErrorText");
         if (errorObj != null) Destroy(errorObj);
     }
@@ -257,9 +246,10 @@ public class UIManager : MonoBehaviour
         modeText.color = Color.white;
         modeText.font = TMP_Settings.defaultFontAsset;
         modeText.alignment = TextAlignmentOptions.Center;
+        modeText.fontSize = 12;
 
         RectTransform modeTransform = modeText.GetComponent<RectTransform>();
-        modeTransform.anchoredPosition = new Vector2(0, -Screen.height / 2 + 60);
+        modeTransform.anchoredPosition = hostButton.GetComponent<RectTransform>().anchoredPosition - new Vector2(0, 25);
         modeTransform.sizeDelta = new Vector2(200, 30);
     }
 
@@ -272,7 +262,6 @@ public class UIManager : MonoBehaviour
         clientButton.onClick.RemoveAllListeners();
         clientButton.onClick.AddListener(OnShutdownClientButtonClicked);
 
-        // Mode Text
         GameObject modeObj = new GameObject("ModeText");
         modeObj.transform.SetParent(uiCanvas.transform, false);
         TextMeshProUGUI modeText = modeObj.AddComponent<TextMeshProUGUI>();
@@ -280,12 +269,12 @@ public class UIManager : MonoBehaviour
         modeText.color = Color.white;
         modeText.font = TMP_Settings.defaultFontAsset;
         modeText.alignment = TextAlignmentOptions.Center;
+        modeText.fontSize = 12; 
 
         RectTransform modeTransform = modeText.GetComponent<RectTransform>();
-        modeTransform.anchoredPosition = new Vector2(0, -Screen.height / 2 + 60);
+        modeTransform.anchoredPosition = clientButton.GetComponent<RectTransform>().anchoredPosition - new Vector2(0, 25);
         modeTransform.sizeDelta = new Vector2(200, 30); 
 
-        // Address Text
         GameObject addressObj = new GameObject("AddressText");
         addressObj.transform.SetParent(uiCanvas.transform, false);
         TextMeshProUGUI addressText = addressObj.AddComponent<TextMeshProUGUI>();
@@ -295,10 +284,9 @@ public class UIManager : MonoBehaviour
         addressText.alignment = TextAlignmentOptions.Center;
 
         RectTransform addressTransform = addressText.GetComponent<RectTransform>();
-        addressTransform.anchoredPosition = new Vector2(0, -Screen.height / 2 + 30); // Adjusted position to be below the mode text
+        addressTransform.anchoredPosition = new Vector2(0, -Screen.height / 2 + 30);
         addressTransform.sizeDelta = new Vector2(200, 30);
     }
-
 
     public void OnShutdownHostButtonClicked()
     {

@@ -19,19 +19,23 @@ public class NetworkHandler : NetworkBehaviour
         }
     }
 
-    private void OnDestroy()
+   public override void OnDestroy()
     {
-        NetworkManager.Singleton.OnClientStarted -= OnClientStarted;
-        NetworkManager.Singleton.OnServerStarted -= OnServerStarted;
-        NetworkManager.Singleton.OnClientConnectedCallback -= ClientOnClientConnected;
-        NetworkManager.Singleton.OnClientDisconnectCallback -= ClientOnClientDisconnected;
+        base.OnDestroy();
+
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.OnClientStarted -= OnClientStarted;
+            NetworkManager.Singleton.OnServerStarted -= OnServerStarted;
+            NetworkManager.Singleton.OnClientConnectedCallback -= ClientOnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback -= ClientOnClientDisconnected;
+        }
     }
 
     private void OnClientStarted()
     {
         Debug.Log("Client Started!");
 
-        // Re-subscribe for symmetry
         NetworkManager.Singleton.OnClientConnectedCallback += ClientOnClientConnected;
         NetworkManager.Singleton.OnClientDisconnectCallback += ClientOnClientDisconnected;
 
@@ -42,7 +46,6 @@ public class NetworkHandler : NetworkBehaviour
     {
         Debug.Log("Server Started!");
 
-        // Re-subscribe for symmetry
         NetworkManager.Singleton.OnClientConnectedCallback += ServerOnClientConnected;
         NetworkManager.Singleton.OnClientDisconnectCallback += ServerOnClientDisconnected;
 
