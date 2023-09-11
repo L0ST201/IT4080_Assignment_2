@@ -1,7 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Unity.Netcode;
-using TMPro;  // Add this at the top with other using statements
+using TMPro;
+using System.Collections;
 
 public class UIManager : MonoBehaviour
 {
@@ -10,6 +11,12 @@ public class UIManager : MonoBehaviour
     private Button hostButton;
     private Button clientButton;
     private Button serverButton;
+    private TextMeshProUGUI addressText;
+
+    public NetworkManager networkManager; 
+
+   private Vector2 originalClientButtonPosition;
+    private Vector2 originalHostButtonPosition;
 
     private void Start()
     {
@@ -18,7 +25,11 @@ public class UIManager : MonoBehaviour
         CreateHostButton();
         CreateClientButton();
         CreateServerButton();
+
+        originalClientButtonPosition = clientButton.GetComponent<RectTransform>().anchoredPosition;
+        originalHostButtonPosition = hostButton.GetComponent<RectTransform>().anchoredPosition;
     }
+
 
     private void CreateUICanvas()
     {
@@ -34,7 +45,7 @@ public class UIManager : MonoBehaviour
         GameObject bgObj = new GameObject("Background");
         bgObj.transform.SetParent(uiCanvas.transform, false);
         background = bgObj.AddComponent<Image>();
-        background.color = new Color(0.1f, 0.1f, 0.1f, 1.0f); // Opaque dark background
+        background.color = new Color(0.1f, 0.1f, 0.1f, 1.0f);
         RectTransform rectTransform = background.GetComponent<RectTransform>();
         rectTransform.anchorMin = Vector2.zero;
         rectTransform.anchorMax = Vector2.one;
@@ -65,26 +76,21 @@ public class UIManager : MonoBehaviour
         GameObject buttonObj = new GameObject(buttonText);
         buttonObj.transform.SetParent(uiCanvas.transform, false);
 
-        // Create button and text components
         Button button = buttonObj.AddComponent<Button>();
         Image image = buttonObj.AddComponent<Image>();
         
-        // Create a material for the gradient and assign to the image
         Material gradientMaterial = new Material(Shader.Find("Custom/ButtonGradientShader"));
         gradientMaterial.SetColor("_TopColor", new Color(0.8f, 0.8f, 0.8f));
         gradientMaterial.SetColor("_BottomColor", new Color(0.05f, 0.05f, 0.05f));
         image.material = gradientMaterial;
 
         TextMeshProUGUI text = CreateTextForButton(buttonObj, buttonText);
-
-        // Set button appearance
         button.targetGraphic = image;
 
-        // Position the button
         RectTransform rectTransform = button.GetComponent<RectTransform>();
         rectTransform.anchoredPosition = position;
         rectTransform.sizeDelta = new Vector2(180, 18);
-        text.fontSize = 15;  // Adjust this value as desired
+        text.fontSize = 15;
         text.fontStyle = FontStyles.Bold;
         text.color = Color.black;
 
@@ -108,70 +114,264 @@ public class UIManager : MonoBehaviour
         rectTransform.sizeDelta = Vector2.zero;
         rectTransform.anchoredPosition = Vector2.zero;
 
-        // Add gradient effect to TMP text
         text.enableVertexGradient = true;
-        text.colorGradient = CreateTMPGradient();
-
-        return text;
-    }
-
-    private VertexGradient CreateTMPGradient()
-    {
-        return new VertexGradient(Color.white, Color.white, Color.gray, Color.gray);
-    }
-
-    private InputField CreateInputField(Vector2 position, string placeholderText)
-    {
-        GameObject inputFieldObj = new GameObject("InputField");
-        inputFieldObj.transform.SetParent(uiCanvas.transform, false);
-
-        InputField inputField = inputFieldObj.AddComponent<InputField>();
-        Image image = inputFieldObj.AddComponent<Image>();
-        Text placeholder = CreateTextForInputField(inputFieldObj, placeholderText, Color.gray);
-        Text text = CreateTextForInputField(inputFieldObj, "", Color.black);
-
-        inputField.textComponent = text;
-        inputField.placeholder = placeholder;
-
-        RectTransform rectTransform = inputField.GetComponent<RectTransform>();
-        rectTransform.anchoredPosition = position;
-        rectTransform.sizeDelta = new Vector2(200, 30);
-
-        return inputField;
-    }
-
-    private Text CreateTextForInputField(GameObject parentObj, string textContent, Color color)
-    {
-        GameObject textObj = new GameObject("Text");
-        textObj.transform.SetParent(parentObj.transform, false);
-
-        Text text = textObj.AddComponent<Text>();
-        text.text = textContent;
-        text.color = color;
-        text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        text.alignment = TextAnchor.MiddleLeft;
-
-        RectTransform rectTransform = text.GetComponent<RectTransform>();
-        rectTransform.anchorMin = Vector2.zero;
-        rectTransform.anchorMax = Vector2.one;
-        rectTransform.sizeDelta = Vector2.zero;
-        rectTransform.anchoredPosition = Vector2.zero;
+        text.colorGradient = new VertexGradient(Color.white, Color.white, Color.gray, Color.gray);
 
         return text;
     }
 
     public void OnHostButtonClicked()
     {
-        NetworkManager.Singleton.StartHost();
+        Debug.Log("OnHostButtonClicked called");
+
+        if (networkManager == null)
+        {
+            Debug.LogError("networkManager is null");
+            return;
+        }
+
+        networkManager.StartHost();
+        UpdateUIForHostingMode();
     }
 
     public void OnClientButtonClicked()
     {
-        NetworkManager.Singleton.StartClient();
+        Debug.Log("OnClientButtonClicked called");
+
+        if (networkManager == null)
+        {
+            Debug.LogError("networkManager is null");
+            return;
+        }
+
+        if (!networkManager.IsClient) // If not already a client
+        {
+            networkManager.StartClient();
+
+            // Check connection after a delay
+            StartCoroutine(CheckClientConnection());
+        }
+        else
+        {
+            // Moved this logic to DisplayConnectionError()
+            DisplayConnectionError();
+        }
     }
 
     public void OnServerButtonClicked()
     {
-        NetworkManager.Singleton.StartServer();
+        if (networkManager == null)
+        {
+            Debug.LogError("networkManager is null");
+            return;
+        }
+
+        networkManager.StartServer();
+    }
+
+    private IEnumerator CheckClientConnection()
+    {
+        yield return new WaitForSeconds(2); // Wait for 2 seconds
+
+        if (networkManager.IsConnectedClient) // Check if the client is connected
+        {
+            UpdateUIForClientMode();
+        }
+        else
+        {
+            DisplayConnectionError();  // Display the error if the client failed to connect
+        }
+    }
+
+    private void DisplayConnectionError()
+    {
+        // Create and display the error text
+        GameObject errorObj = new GameObject("ErrorText");
+        errorObj.transform.SetParent(uiCanvas.transform, false);
+        TextMeshProUGUI errorText = errorObj.AddComponent<TextMeshProUGUI>();
+        errorText.text = "Failed to connect to the host!";
+        errorText.color = Color.red;
+        errorText.font = TMP_Settings.defaultFontAsset;
+        errorText.alignment = TextAlignmentOptions.Center;
+
+        RectTransform errorTransform = errorText.GetComponent<RectTransform>();
+        errorTransform.anchoredPosition = Vector2.zero;
+        errorTransform.sizeDelta = new Vector2(400, 30);
+
+        // Make server and host buttons inactive
+        serverButton.gameObject.SetActive(false);
+        hostButton.gameObject.SetActive(false); 
+
+        // Move the client button to the position of the host button and adjust its state
+        clientButton.GetComponent<RectTransform>().anchoredPosition = hostButton.GetComponent<RectTransform>().anchoredPosition;
+        clientButton.GetComponentInChildren<TextMeshProUGUI>().text = "Shutdown Client";
+        clientButton.onClick.RemoveAllListeners();
+        clientButton.onClick.AddListener(OnShutdownClientButtonClicked);
+    }
+
+    private void ResetUIAfterShutdown()
+    {
+        // Make host and server buttons active again
+        hostButton.gameObject.SetActive(true);
+        serverButton.gameObject.SetActive(true);
+
+        // Reset client button to its initial state
+        clientButton.GetComponentInChildren<TextMeshProUGUI>().text = "Client";
+        clientButton.onClick.RemoveAllListeners();
+        clientButton.onClick.AddListener(OnClientButtonClicked);
+
+        // Remove error message if present
+        GameObject errorObj = GameObject.Find("ErrorText");
+        if (errorObj != null) Destroy(errorObj);
+    }
+
+    private void HandleFailedConnection()
+    {
+        // Hide the Server button
+        serverButton.gameObject.SetActive(false);
+
+        // Set Client button to its default state
+        clientButton.GetComponentInChildren<TextMeshProUGUI>().text = "Client";
+        clientButton.onClick.RemoveAllListeners();
+        clientButton.onClick.AddListener(OnClientButtonClicked);
+        clientButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(-Screen.width / 2 + 100, Screen.height / 2 - 55); // Reset the position
+
+        // Destroy the error message
+        GameObject errorObj = GameObject.Find("ErrorText");
+        if (errorObj != null) Destroy(errorObj);
+    }
+
+    private void UpdateUIForHostingMode()
+    {
+        clientButton.gameObject.SetActive(false);
+        serverButton.gameObject.SetActive(false);
+
+        hostButton.GetComponentInChildren<TextMeshProUGUI>().text = "Shutdown Host";
+        hostButton.onClick.RemoveAllListeners();
+        hostButton.onClick.AddListener(OnShutdownHostButtonClicked);
+
+        GameObject modeObj = new GameObject("ModeText");
+        modeObj.transform.SetParent(uiCanvas.transform, false);
+        TextMeshProUGUI modeText = modeObj.AddComponent<TextMeshProUGUI>();
+        modeText.text = "Mode: Host";
+        modeText.color = Color.white;
+        modeText.font = TMP_Settings.defaultFontAsset;
+        modeText.alignment = TextAlignmentOptions.Center;
+
+        RectTransform modeTransform = modeText.GetComponent<RectTransform>();
+        modeTransform.anchoredPosition = new Vector2(0, -Screen.height / 2 + 60);
+        modeTransform.sizeDelta = new Vector2(200, 30);
+    }
+
+    private void UpdateUIForClientMode()
+    {
+        hostButton.gameObject.SetActive(false);
+        serverButton.gameObject.SetActive(false);
+
+        clientButton.GetComponentInChildren<TextMeshProUGUI>().text = "Shutdown Client";
+        clientButton.onClick.RemoveAllListeners();
+        clientButton.onClick.AddListener(OnShutdownClientButtonClicked);
+
+        // Mode Text
+        GameObject modeObj = new GameObject("ModeText");
+        modeObj.transform.SetParent(uiCanvas.transform, false);
+        TextMeshProUGUI modeText = modeObj.AddComponent<TextMeshProUGUI>();
+        modeText.text = "Mode: Client";
+        modeText.color = Color.white;
+        modeText.font = TMP_Settings.defaultFontAsset;
+        modeText.alignment = TextAlignmentOptions.Center;
+
+        RectTransform modeTransform = modeText.GetComponent<RectTransform>();
+        modeTransform.anchoredPosition = new Vector2(0, -Screen.height / 2 + 60);
+        modeTransform.sizeDelta = new Vector2(200, 30); 
+
+        // Address Text
+        GameObject addressObj = new GameObject("AddressText");
+        addressObj.transform.SetParent(uiCanvas.transform, false);
+        TextMeshProUGUI addressText = addressObj.AddComponent<TextMeshProUGUI>();
+        addressText.text = "Transport: Unity Transport";
+        addressText.color = Color.white;
+        addressText.font = TMP_Settings.defaultFontAsset;
+        addressText.alignment = TextAlignmentOptions.Center;
+
+        RectTransform addressTransform = addressText.GetComponent<RectTransform>();
+        addressTransform.anchoredPosition = new Vector2(0, -Screen.height / 2 + 30); // Adjusted position to be below the mode text
+        addressTransform.sizeDelta = new Vector2(200, 30);
+    }
+
+
+    public void OnShutdownHostButtonClicked()
+    {
+        if (networkManager == null)
+        {
+            Debug.LogError("networkManager is null");
+            return;
+        }
+
+        networkManager.Shutdown();
+        ResetUI();
+    }
+
+    public void OnShutdownClientButtonClicked()
+    {
+        if (networkManager == null)
+        {
+            Debug.LogError("networkManager is null");
+            return;
+        }
+
+        networkManager.Shutdown();
+        ResetUIForClient();
+    }
+
+    private void ResetUI()
+    {
+        clientButton.gameObject.SetActive(true);
+        serverButton.gameObject.SetActive(true);
+        hostButton.gameObject.SetActive(true);
+
+        clientButton.GetComponent<RectTransform>().anchoredPosition = originalClientButtonPosition;
+        hostButton.GetComponent<RectTransform>().anchoredPosition = originalHostButtonPosition;
+
+        clientButton.GetComponentInChildren<TextMeshProUGUI>().text = "Client";
+        clientButton.onClick.RemoveAllListeners();
+        clientButton.onClick.AddListener(OnClientButtonClicked);
+
+        hostButton.GetComponentInChildren<TextMeshProUGUI>().text = "Host";
+        hostButton.onClick.RemoveAllListeners();
+        hostButton.onClick.AddListener(OnHostButtonClicked);
+
+        GameObject modeObj = GameObject.Find("ModeText");
+        if (modeObj != null) Destroy(modeObj);
+
+        GameObject addressObj = GameObject.Find("AddressText");
+        if (addressObj != null) Destroy(addressObj);
+    }
+
+    private void ResetUIForClient()
+    {
+        clientButton.gameObject.SetActive(true);
+        serverButton.gameObject.SetActive(true);
+        hostButton.gameObject.SetActive(true);
+
+        clientButton.GetComponent<RectTransform>().anchoredPosition = originalClientButtonPosition;
+        hostButton.GetComponent<RectTransform>().anchoredPosition = originalHostButtonPosition;
+
+        clientButton.GetComponentInChildren<TextMeshProUGUI>().text = "Client";
+        clientButton.onClick.RemoveAllListeners();
+        clientButton.onClick.AddListener(OnClientButtonClicked);
+
+        hostButton.GetComponentInChildren<TextMeshProUGUI>().text = "Host";
+        hostButton.onClick.RemoveAllListeners();
+        hostButton.onClick.AddListener(OnHostButtonClicked);
+
+        GameObject modeObj = GameObject.Find("ModeText");
+        if (modeObj != null) Destroy(modeObj);
+
+        GameObject addressObj = GameObject.Find("AddressText");
+        if (addressObj != null) Destroy(addressObj);
+
+        GameObject errorObj = GameObject.Find("ErrorText");
+        if (errorObj != null) Destroy(errorObj);
     }
 }
