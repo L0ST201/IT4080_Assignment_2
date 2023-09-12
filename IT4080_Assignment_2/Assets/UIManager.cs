@@ -3,6 +3,8 @@ using UnityEngine.UI;
 using Unity.Netcode;
 using TMPro;
 using System.Collections;
+using UnityEngine.EventSystems;
+
 
 public class UIManager : MonoBehaviour
 {
@@ -28,6 +30,10 @@ public class UIManager : MonoBehaviour
 
         originalClientButtonPosition = clientButton.GetComponent<RectTransform>().anchoredPosition;
         originalHostButtonPosition = hostButton.GetComponent<RectTransform>().anchoredPosition;
+
+        AddHoverEffectToButton(hostButton);
+        AddHoverEffectToButton(clientButton);
+        AddHoverEffectToButton(serverButton);
     }
 
 
@@ -52,6 +58,24 @@ public class UIManager : MonoBehaviour
         rectTransform.sizeDelta = Vector2.zero;
         rectTransform.anchoredPosition = Vector2.zero;
     }
+
+    private void AddHoverEffectToButton(Button button)
+    {
+        Color originalColor = button.GetComponent<Image>().color;
+        Material mat = button.GetComponent<Image>().material;
+        Color hoverColor = new Color(0.75f, 0.75f, 0.75f);
+
+        button.AddEventTrigger(EventTriggerType.PointerEnter, (data) => 
+        {
+            mat.SetColor("_TintColor", hoverColor);
+        });
+
+        button.AddEventTrigger(EventTriggerType.PointerExit, (data) => 
+        {
+            mat.SetColor("_TintColor", originalColor);
+        });
+    }
+
 
     private void CreateHostButton()
     {

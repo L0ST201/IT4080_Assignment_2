@@ -3,10 +3,11 @@ Shader "Custom/ButtonGradientShader"
     Properties
     {
         _MainTex("Dummy Texture", 2D) = "white" {}
-        _TopColor("Top Color", Color) = (0.9,0.9,0.9,1) // Slightly darker than white
-        _BottomColor("Bottom Color", Color) = (0.8,0.8,0.8,1) // Dark gray
-        _Bias("Bias", Range(0,1)) = 0.5 // Default to 0.5 (no bias)
-        _Smoothness("Smoothness", Range(0,1)) = 0.5 // Controls the curvature
+        _TopColor("Top Color", Color) = (0.9,0.9,0.9,1) 
+        _BottomColor("Bottom Color", Color) = (0.8,0.8,0.8,1) 
+        _Bias("Bias", Range(0,1)) = 0.5 
+        _Smoothness("Smoothness", Range(0,1)) = 0.5 
+        _TintColor("Tint Color", Color) = (1,1,1,1) 
     }
 
     SubShader
@@ -38,6 +39,7 @@ Shader "Custom/ButtonGradientShader"
             float4 _BottomColor;
             float _Bias;
             float _Smoothness;
+            float4 _TintColor;
 
             v2f vert(appdata v)
             {
@@ -51,7 +53,7 @@ Shader "Custom/ButtonGradientShader"
             {
                 float grad = smoothstep(_Bias - _Smoothness, _Bias + _Smoothness, i.uv.y);
                 half4 col = lerp(_BottomColor, _TopColor, grad);
-                return col;
+                return col * _TintColor; 
             }
             ENDCG
         }

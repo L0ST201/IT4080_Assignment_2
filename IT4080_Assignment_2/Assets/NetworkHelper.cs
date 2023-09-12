@@ -1,8 +1,17 @@
 public static class NetworkHelper
 {
+    private static ulong? currentHostId = null;
+
+    public static void SetHostId(ulong hostId)
+    {
+        currentHostId = hostId;
+    }
+
     public static bool IsClientAlsoHost(ulong clientId)
     {
-        // Replace with actual logic to determine if the client is also the host.
-        return clientId == 0;  // Assuming clientId 0 is reserved for the host for this mockup.
+        if (!currentHostId.HasValue)
+            return false;
+
+        return clientId == currentHostId.Value;
     }
 }
